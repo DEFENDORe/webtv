@@ -1,5 +1,5 @@
 <template>
-    <VResizeDrawer ref="resizeDrawer" v-model="drawers.groups" :location="'left'" width="300px" :min-width="300"
+    <VResizeDrawer ref="resizeDrawer" v-model="drawers.groups" :location="'left'" width="300px" min-width="200px" max-width="50%"
         permanent :touchless="xs" :save-width="false" :style="resizeDrawerStyle">
         <template v-slot:handle>
             <v-icon icon="mdi-chevron-right" />
@@ -23,7 +23,7 @@
         <v-virtual-scroll v-else :items="filteredGroups"
             :height="`calc(100dvh - 106px - ${drawers.video ? 300 : 0}px)`">
             <template v-slot:default="{ item }">
-                <v-list-item @click="selectedGroup = item; drawers.groups = !xs" :title="item"
+                <v-list-item @click="selectedGroup = item; drawers.groups = !xs" :title="item === '__NULL__' ? '(UNSORTED)' : item"
                     :active="selectedGroup === item">
                     <template v-slot:append>
                         <small>({{ streams[item].length }})</small>

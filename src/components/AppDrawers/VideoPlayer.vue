@@ -1,7 +1,7 @@
 <template>
   <v-navigation-drawer v-model="drawers.video" width="300" location="bottom" permanent>
     <v-row no-gutters style="height: 300px;" :style="{ overflowY: xs ? 'scroll' : 'hidden' }">
-      <v-col class="bg-black" cols="12" sm="4" style="position: relative;" :order="xs ? 1 : undefined">
+      <v-col class="bg-black" cols="12" sm="5" md="4" lg="3" xl="2" style="position: relative;" :order="xs ? 1 : undefined">
         <video ref="video" disablePictureInPicture :controls="videoInfo?.duration !== Infinity"></video>
         <div v-show="videoInfo?.duration === Infinity"
           style="background-color: rgba(0, 0, 0, 0.7); text-align: center; position: absolute; bottom: 0; left: 0; width: 100%;">
@@ -15,7 +15,7 @@
             Live Broadcast</div>
         </div>
       </v-col>
-      <v-col cols="12" sm="8">
+      <v-col cols="12" sm="7" md="8" lg="9" xl="10">
         <v-card class="pa-2">
           <template v-slot:prepend v-if="selectedStream?.tvgLogo">
             <v-img :minWidth="100" :height="50" :src="selectedStream?.tvgLogo" lazy-src="@/assets/tv-icon.png"

@@ -12,7 +12,7 @@
             etc.</small>
         </template>
         <v-combobox v-model="groupFilters" chips multiple label="Group Filter Keywords" clearable
-          @click:clear="saveFilters" @update:model-value="saveFilters" />
+          @click:clear="saveFilters" @update:model-value="saveFilters" :disabled="scanning.m3u"/>
       </v-card>
       <v-divider class="my-2" />
       <M3uParser v-model:streams="streams" v-model:scanning="scanning" @clear="drawers.video = false; selectedGroup = null; selectedStream = null;"

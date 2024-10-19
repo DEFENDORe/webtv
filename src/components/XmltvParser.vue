@@ -78,7 +78,7 @@ type Program = Omit<SimpleProgramme, 'channel'>
 const channels = defineModel<{ [key:string]: Program[] }>('channels', { required: true })
 const scanning = defineModel<{ xmltv: boolean }>('scanning', { required: true })
 
-const mode = ref<'local' | 'remote'>(localStorage.getItem('xmltv-mode') as 'local' | 'remote' || 'local')
+const mode = ref<'local' | 'remote'>('remote')
 
 const saveUrl = ref(!!localStorage.getItem('xmltv-url'))
 
@@ -111,9 +111,7 @@ onMounted(() => {
 })
 
 const clear = (wipeInputs = false) => {
-  localStorage.removeItem('xmltv-mode')
   localStorage.removeItem('xmltv-url')
-  localStorage.setItem('xmltv-mode', mode.value)
   saveUrl.value = false
   file.value = undefined
   url.value = ''

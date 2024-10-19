@@ -85,7 +85,10 @@
   }>({ filtered: 0, total: 0})
 
   const { groups, groupFilters } = defineProps({
-    groups: Array<String>,
+    groups: {
+      type: Array<String>,
+        required: true
+    },
     groupFilters: {
       type: Array<String>,
       required: true
@@ -96,7 +99,7 @@
 
   const saveUrl = ref(!!localStorage.getItem('m3u-url'))
 
-  const mode = ref<'local' | 'remote'>(localStorage.getItem('m3u-mode') as 'local' | 'remote' || 'remote')
+  const mode = ref<'local' | 'remote'>('remote')
 
   const file = ref<File>()
   const url = ref(localStorage.getItem('m3u-url') || '')
@@ -119,21 +122,20 @@
   })
 
   const clear = () => {
-    localStorage.removeItem('m3u-mode')
     localStorage.removeItem('m3u-url')
-    localStorage.setItem('m3u-mode', mode.value)
     emit('clear')
     streams.value = {}
     count.value = { filtered: 0, total: 0 }
     progress.value = null
     fileSize.value = 0
-    file.value = undefined
-    url.value = ''
     error.value = null
     hasError.value = false
+    file.value = undefined
+    url.value = ''
   }
 
   const parse = async () => {
+    emit('clear')
     streams.value = {}
     count.value = { filtered: 0, total: 0 }
     progress.value = null
@@ -142,7 +144,6 @@
     hasError.value = false
     if (mode.value === 'local' && file.value === undefined)
       return
-    localStorage.setItem('m3u-mode', mode.value)
     if (mode.value === 'remote' && saveUrl.value)
       localStorage.setItem('m3u-url', url.value)
     progress.value = Infinity
