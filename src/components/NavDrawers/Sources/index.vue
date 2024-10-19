@@ -1,5 +1,5 @@
 <template>
-  <v-navigation-drawer v-model="drawers.sources" location="right" width="500" temporary>
+  <v-navigation-drawer v-model="drawers.sources" location="right" width="500" temporary touchless :absolute="drawers.sources">
     <v-container>
       <h1>
         <v-icon icon="mdi-database-cog" class="mb-2 mr-2" size="small" /> IPTV Sources
@@ -26,8 +26,11 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 
-import type { M3uItem } from '../../lib/M3uParser'
-import type { SimpleProgramme } from '../../lib/XmltvParser'
+import type { M3uItem } from '../../../lib/M3uParser'
+import type { SimpleProgramme } from '../../../lib/XmltvParser'
+
+import M3uParser from './M3uParser.vue'
+import XmltvParser from './XmltvParser.vue'
 
 type M3uStream = Omit<M3uItem, 'groupTitle'>
 type Program = Omit<SimpleProgramme, 'channel'>

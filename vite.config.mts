@@ -1,5 +1,4 @@
 // Plugins
-import Components from 'unplugin-vue-components/vite'
 import Vue from '@vitejs/plugin-vue'
 import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import ViteFonts from 'unplugin-fonts/vite'
@@ -16,7 +15,6 @@ export default defineConfig({
     }),
     // https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin#readme
     Vuetify(),
-    Components(),
     ViteFonts({
       google: {
         families: [{
@@ -42,6 +40,6 @@ export default defineConfig({
     ],
   },
   server: {
-    port: 3002,
+    port: 3000,
   },
 })

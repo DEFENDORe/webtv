@@ -36,6 +36,7 @@
             v-model="url"
             @update:model-value="hasError = false"
             @keydown.enter="parse"
+            @update:focused="ensureVisible($el)"
           >
             <template v-slot:append-inner>
               <v-btn icon="mdi-download-circle" variant="plain" @click="parse"/>
@@ -67,11 +68,11 @@
 
 <script lang="ts" setup>
 
-import XmltvParserWorker from '../workers/XmltvParser?worker'
+import XmltvParserWorker from '../../../workers/XmltvParser?worker'
 
 import { ref, computed, onMounted } from 'vue'
 
-import type { SimpleProgramme } from '../lib/XmltvParser'
+import type { SimpleProgramme } from '../../../lib/XmltvParser'
 
 type Program = Omit<SimpleProgramme, 'channel'>
 
@@ -110,7 +111,13 @@ onMounted(() => {
   }
 })
 
-const clear = (wipeInputs = false) => {
+// Workaround to scroll to input when keyboard opens in PWA mode
+const ensureVisible = (e: HTMLElement) => { 
+  if ('standalone' in window.navigator)
+    setTimeout(() => e.scrollIntoView({ behavior: 'smooth' }), 500)
+}
+
+const clear = () => {
   localStorage.removeItem('xmltv-url')
   saveUrl.value = false
   file.value = undefined

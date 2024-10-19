@@ -40,10 +40,7 @@
         theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark'
         localStorage.setItem('theme', theme.global.name.value)
     }
-
     
     const time = ref((new Date()).toLocaleTimeString())
     setInterval(() => time.value = (new Date()).toLocaleTimeString(), 500)
-
-    
 </script>
