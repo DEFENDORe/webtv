@@ -35,8 +35,8 @@ import type { M3uItem } from '@/lib/M3uParser'
 import type { SimpleProgramme } from '@/lib/XmltvParser'
 import { ref, computed } from 'vue'
 
-const selectedStream = defineModel<M3uItem | null>('selectedStream', { required: true })
-const { selectedGroup, streams, channels } = defineProps<{
+const { selectedStream, selectedGroup, streams, channels } = defineProps<{
+  selectedStream: M3uItem | null
   selectedGroup: string,
   streams: { [key: string]: Omit<M3uItem, "groupTitle">[] },
   channels: { [key: string]: Omit<SimpleProgramme, "channel">[] }

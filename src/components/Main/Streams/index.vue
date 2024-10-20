@@ -13,7 +13,17 @@
     <!-- List View -->
     <ListView
       v-if="!isGuideView"
-      v-model:selected-stream="selectedStream"
+      v-bind:selected-stream="selectedStream"
+      v-bind:selected-group="selectedGroup"
+      v-bind:channels="channels"
+      v-bind:streams="streams"
+      @select="selectStream"/>
+    
+    <!-- Guide View -->
+    <GuideView
+      v-else
+      v-bind:drawers="drawers"
+      v-bind:selected-stream="selectedStream"
       v-bind:selected-group="selectedGroup"
       v-bind:channels="channels"
       v-bind:streams="streams"
@@ -25,8 +35,11 @@
 <script lang="ts" setup>
 import type { M3uItem } from '@/lib/M3uParser'
 import type { SimpleProgramme } from '@/lib/XmltvParser'
-import { ref, computed } from 'vue'
-import ListView from './ListView.vue';
+import { ref } from 'vue'
+
+// Components
+import ListView from './ListView.vue'
+import GuideView from './GuideView.vue'
 
 const drawers = defineModel<{ video: boolean }>('drawers', { required: true })
 const selectedStream = defineModel<M3uItem | null>('selectedStream', { required: true })
