@@ -1,14 +1,14 @@
 <template>
 <v-container fluid class="pa-0">
 
-  <div style="position: relative; z-index: 1; width: 100%;" :style="{ top: timelineHeight + 'px' }">
+  <div style="position: relative; width: 100%; z-index: 1;" :style="{ top: timelineHeight + 'px' }">
         
         <div class="scroll-y" :style="{ height: containerHeight  + 'px' }">
             <div ref="scroll-x" class="scroll-x" :style="{ width: '100%', height: (sortedStreams.length * rowHeight) + timelineHeight + 'px' }">
                 <!-- Channels -->
-                <div v-for="(stream, i) of sortedStreams" :style="{ width: rowHeaderWidth + 'px' }" class="row-header" :id="!i ? 'top' : i === sortedStreams.length - 1 ? 'bottom' : undefined" :data-index="i">
+                <div v-for="(stream, i) of sortedStreams" :style="{ width: rowHeaderWidth + 'px' }" class="row-header">
                     <!-- Channel -->
-                    <div class="row-header-container d-flex pa-0" :style="{ height: rowHeight  + 'px' }" :class="selectedStream?.url === stream.url ? 'channel-active' : 'channel'" @click="selectedStream?.url === stream.url ? undefined : emit('select', { ...stream, groupTitle: selectedGroup })">
+                    <div class="row-header-container" :style="{ height: rowHeight  + 'px' }" :class="selectedStream?.url === stream.url ? 'channel-active' : 'channel'" @click="selectedStream?.url === stream.url ? undefined : emit('select', { ...stream, groupTitle: selectedGroup })">
                         <span class="d-inline-block">
                             <v-img lazy-src="@/assets/tv-icon.png" :src="stream.tvgLogo" alt="tvg-logo"
                                 :style="{ width: rowHeight + 'px' }"></v-img>
@@ -35,6 +35,15 @@
                                 <br/>
                                 <small :style="styleProgramText(stream.tvgId, i)">{{ program.description }}</small>
                         </div>
+                        <div
+                            v-if="channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < guideStartTime + (hoursOfEpg * 3600000)"
+                            class="program px-1"
+                            :class="{ active: channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < now}"
+                            style="display: inline-block; width: 100%;"
+                            :style="{height: rowHeight + 'px' }"
+                        >
+                            <span :style="styleLastProgramText(stream.tvgId)">No Information</span>
+                        </div>
                     </div>
                     <div v-else
                         :style="[{ height: '100%', width: '100%' }]" @click="emit('select', { ...stream, groupTitle: selectedGroup })"
@@ -48,6 +57,7 @@
         </div>
     </div>
 
+    <!-- top timeline bar, current time, now marker -->
   <div
     ref="scroll-x-timeline"
     class="scroll-x-timeline"
@@ -118,6 +128,7 @@ const emit = defineEmits<{ select: [value: M3uItem | null] }>()
 
 const now = ref(Date.now())
 const hoursOfEpg = ref(24)
+const pastHours = ref(6)
 const timelineHeight = ref(40)
 const rowHeight = ref(40)
 const rowHeaderWidth = ref(200)
@@ -126,7 +137,7 @@ const scrollXPos = ref(0)
 
 const guideStartTime = (() => {
   const date = new Date()
-  date.setHours(date.getHours() - 12, 0, 0, 0)
+  date.setHours(date.getHours() - pastHours.value, 0, 0, 0)
   return date.getTime()
 })()
 
@@ -154,9 +165,7 @@ const getTimeline = (hourOffset: number) => {
     return thisHour.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute:'2-digit' })
 }
 
-const onWheel = (e: WheelEvent) => {
-  scrollXTimeline.value!.scrollLeft! += e.deltaY
-}
+const onWheel = (e: WheelEvent) => scrollXTimeline.value!.scrollLeft! += e.deltaY
 
 const onScrollXBottom = (e: Event) => {
     e.preventDefault()
@@ -186,27 +195,28 @@ const styleProgram = (channel: string, index: number) => {
         lineHeight: program.description ? (rowHeight.value / 2.4) + 'px' : rowHeight.value + 'px'
     }
 }
+const styleLastProgramText = (channel: string) => {
+    const lastProgram = channels[channel][channels[channel].length - 1]
+    return {
+        marginLeft: currentScrollTime.value < lastProgram.stop! ? '0px' : `${scrollXPos.value - ((lastProgram.stop! - guideStartTime) * pixelsPerHour.value / 3600000)}px`,
+        lineHeight: rowHeight.value + 'px'
+    }
+}
 const styleProgramText = (channel: string, index: number) => {
     const program = channels[channel][index]
-    const now = guideStartTime + (scrollXPos.value / pixelsPerHour.value * 3600000)
     if (program.start < guideStartTime && program.stop! > guideStartTime)
-       return { 'margin-left': `${scrollXPos.value}px` }
-    if (now < program.stop! && now > program.start)
-      return { 'margin-left': `${scrollXPos.value - ((program.start - guideStartTime) * pixelsPerHour.value / 3600000)}px` }
+       return { marginLeft: `${scrollXPos.value}px` }
+    if (currentScrollTime.value > program.start && currentScrollTime.value < program.stop!)
+      return { marginLeft: `${scrollXPos.value - ((program.start - guideStartTime) * pixelsPerHour.value / 3600000)}px` }
 }
+
+const currentScrollTime = computed(() => guideStartTime + (scrollXPos.value / pixelsPerHour.value * 3600000))
 
 const isProgramLive = (program: Omit<SimpleProgramme, "channel">) => now.value < (program.stop || 0) && now.value >= program.start
 
-const scrollTime = computed(() => {
-  const time = new Date(guideStartTime)
-  time.setMinutes(scrollXPos.value / pixelsPerHour.value * 60)
-  return time.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute:'2-digit' }) 
-})
+const scrollTime = computed(() => (new Date(currentScrollTime.value)).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute:'2-digit' }))
 
-const offsetToNow = computed(() => {
-  const time = guideStartTime + (scrollXPos.value / pixelsPerHour.value * 3600000)
-  return  Math.floor((time - now.value) / 3600000 * pixelsPerHour.value) + 1
-})
+const offsetToNow = computed(() => Math.floor((currentScrollTime.value - now.value) / 3600000 * pixelsPerHour.value) + 1)
 
 const nowHour = computed(() => {
   const thisNowHour = new Date(now.value)
