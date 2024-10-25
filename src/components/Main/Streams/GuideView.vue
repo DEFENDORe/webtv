@@ -1,16 +1,14 @@
 <template>
-<v-container  fluid class="pa-0">
+<v-container fluid class="pa-0">
 
   <div style="position: relative; z-index: 1; width: 100%;" :style="{ top: timelineHeight + 'px' }">
         
-        <div ref="scroll-y" :style="{ height: containerHeight + 'px' }" class="scroll-y">
-            <div ref="scroll-x" :style="{ width: '100%', height: (streams[selectedGroup].length * rowHeight) + timelineHeight + 'px' }" class="scroll-x">
-
-                
+        <div class="scroll-y" :style="{ height: containerHeight  + 'px' }">
+            <div ref="scroll-x" class="scroll-x" :style="{ width: '100%', height: (sortedStreams.length * rowHeight) + timelineHeight + 'px' }">
                 <!-- Channels -->
-                <div v-for="(stream, i) of streams[selectedGroup]" :style="{ width: rowHeaderWidth + 'px' }" class="row-header" :id="!i ? 'top' : i === streams[selectedGroup].length - 1 ? 'bottom' : undefined" :data-index="i">
+                <div v-for="(stream, i) of sortedStreams" :style="{ width: rowHeaderWidth + 'px' }" class="row-header" :id="!i ? 'top' : i === sortedStreams.length - 1 ? 'bottom' : undefined" :data-index="i">
                     <!-- Channel -->
-                    <div class="row-header-container d-flex pa-0" :style="{ height: rowHeight  + 'px' }" @click="emit('select', { ...stream, groupTitle: selectedGroup })">
+                    <div class="row-header-container d-flex pa-0" :style="{ height: rowHeight  + 'px' }" :class="selectedStream?.url === stream.url ? 'channel-active' : 'channel'" @click="selectedStream?.url === stream.url ? undefined : emit('select', { ...stream, groupTitle: selectedGroup })">
                         <span class="d-inline-block">
                             <v-img lazy-src="@/assets/tv-icon.png" :src="stream.tvgLogo" alt="tvg-logo"
                                 :style="{ width: rowHeight + 'px' }"></v-img>
@@ -20,33 +18,29 @@
                 </div>
                 
                 <!-- PROGRAMS -->
-                <div v-for="stream of streams[selectedGroup]"
-                    :style="{ bottom: (rowHeight * streams[selectedGroup].length) + 'px', left: rowHeaderWidth + 'px', height: rowHeight + 'px', width: pixelsPerHour * hoursOfEpg + 'px' }"
-                    class="row"
-                >
-                    <div v-if="stream.tvgId && channels[stream.tvgId]">
-                        <div v-for="(program, i) of channels[stream.tvgId]"
-                            :style="[styleProgram(stream.tvgId, i), { lineHeight: program.description ? (rowHeight / 2.4) + 'px' : rowHeight + 'px'}]"
-                            class="program px-1" :class="[isProgramLive(program) ? selectedStream?.url === stream.url ? 'active' : 'live' : 'dead', program.description ? 'pt-1' : '']"
+                <div v-for="stream of sortedStreams" :style="styleProgramRow()" class="row">
+                    <div v-if="stream.tvgId && channels[stream.tvgId] && channels[stream.tvgId].length" :style="{ height: rowHeight + 'px'}">
+                        <div
+                            v-if="channels[stream.tvgId][0] && channels[stream.tvgId][0].start > guideStartTime"
+                            class="program px-1"
+                            :style="[{ width: ((channels[stream.tvgId][0].start - guideStartTime) / 3600000 * pixelsPerHour) + 'px', height: rowHeight + 'px', display: 'inline-block' }]"
+                        >
+                            <span :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px'}">No Information</span>
+                        </div>
+                        <div v-for="(program, i) of channels[stream.tvgId]" :style="styleProgram(stream.tvgId, i)"
+                            class="program px-1" :class="{ 'pt-1': program.description, active: isProgramLive(program) && selectedStream?.url === stream.url, live: isProgramLive(program) }"
                             @click="isProgramLive(program) && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined"
                         >
-                            <span :style="styleProgramShiftText(stream, i)">{{ program.title }}</span><br />
-                            <small :style="styleProgramShiftText(stream, i)">{{ program.description }}</small>
-                        </div>
-                        <div
-                            :style="[{ height: rowHeight + 'px', width: pixelsPerHour * hoursOfEpg + 'px', lineHeight: rowHeight + 'px' }, styleProgramShiftText(stream, -1)]"
-                            class="program px-1"
-                            :class="isProgramDone(channels[stream.tvgId][channels[stream.tvgId].length - 1]) ? 'live' : ''"
-                            @click="isProgramDone(channels[stream.tvgId][channels[stream.tvgId].length - 1]) ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined"
-                        >
-                            No Information
+                                <span :style="styleProgramText(stream.tvgId, i)">{{ /* (new Date(program.start)).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute:'2-digit' })  + ' - ' + (new Date(program.stop!)).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute:'2-digit' })  + ': ' + */ program.title }}</span>
+                                <br/>
+                                <small :style="styleProgramText(stream.tvgId, i)">{{ program.description }}</small>
                         </div>
                     </div>
                     <div v-else
-                        :style="[{ height: rowHeight + 'px', width: pixelsPerHour * hoursOfEpg + 'px', lineHeight: rowHeight + 'px' }, styleProgramShiftText(stream, 0)]" @click="emit('select', { ...stream, groupTitle: selectedGroup })"
+                        :style="[{ height: '100%', width: '100%' }]" @click="emit('select', { ...stream, groupTitle: selectedGroup })"
                         class="program live px-1"
                     >
-                        No Information
+                        <div :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px'}">No Information</div>
                     </div>
                     
                 </div>
@@ -58,7 +52,7 @@
     ref="scroll-x-timeline"
     class="scroll-x-timeline"
     :onwheel="onWheel" :onscroll="onScrollXBottom" 
-    :style="{ height: containerHeight + 'px', lineHeight: timelineHeight + 'px', top: -(scrollBarWidth - 60) + 'px'}"
+    :style="{ height: containerHeight + 'px', lineHeight: timelineHeight + 'px', top: -(scrollBarWidth - 60 - scrollBarWidth) + 'px'}"
     >
     <!-- NOW LINE MARKER-->
     <div class="now-line" :style="{top: timelineHeight + 'px', left: liveXPos + rowHeaderWidth - .5 + 'px' }">
@@ -66,7 +60,7 @@
     </div>
     
     <!-- CURRENT TIME -->
-    <div class="current-time" :style="{ width: rowHeaderWidth + 'px', height: timelineHeight + 'px' }" @click="!offsetToNow ? scrollToThisHalfHour() : scrollToNow()">
+    <div class="current-time" :style="{ width: rowHeaderWidth + 'px', height: timelineHeight + 'px' }" @click="scrollXPos !== halfHourXPos ? scrollToThisHalfHour() : scrollToNow()">
         <div class="current-time-container pr-2" style="height: 100%;">
             <span style="vertical-align: middle;" class="mr-2">{{ scrollTime }}</span>
             <v-icon 
@@ -95,13 +89,11 @@ import type { SimpleProgramme } from '@/lib/XmltvParser'
 import { ref, computed, useTemplateRef, onMounted, onBeforeUnmount } from 'vue'
 import { useDisplay } from 'vuetify'
 import getScrollBarWidth from '@/lib/GetScrollbarWidth'
-import { url } from 'inspector'
 
 const display = useDisplay()
 const scrollBarWidth = getScrollBarWidth()
 
 const scrollXTimeline = useTemplateRef('scroll-x-timeline')
-const scrollY = useTemplateRef('scroll-y')
 const scrollX = useTemplateRef('scroll-x')
 
 const { drawers, selectedStream, selectedGroup, streams, channels } = defineProps<{
@@ -112,21 +104,31 @@ const { drawers, selectedStream, selectedGroup, streams, channels } = defineProp
   channels: { [key: string]: Omit<SimpleProgramme, "channel">[] }
 }>()
 
+const sortedStreams = computed(() => {
+  return streams[selectedGroup]
+    .map((s) => ({ ...s, groupTitle: selectedGroup })) // Re-add groupTitle to stream..
+    .sort((a, b) => {
+      const first = a.title.toLowerCase()
+      const sec = b.title.toLocaleLowerCase()
+      return (first < sec) ? -1 : (first > sec) ? 1 : 0
+    })
+})
+
 const emit = defineEmits<{ select: [value: M3uItem | null] }>()
+
+const now = ref(Date.now())
+const hoursOfEpg = ref(24)
+const timelineHeight = ref(40)
+const rowHeight = ref(40)
+const rowHeaderWidth = ref(200)
+const pixelsPerHour = ref(400)
+const scrollXPos = ref(0)
 
 const guideStartTime = (() => {
   const date = new Date()
   date.setHours(date.getHours() - 12, 0, 0, 0)
   return date.getTime()
 })()
-
-const now = ref(Date.now())
-const hoursOfEpg = ref(48)
-const timelineHeight = ref(40)
-const rowHeight = ref(40)
-const rowHeaderWidth = ref(200)
-const pixelsPerHour = ref(400)
-const scrollXPos = ref(0)
 
 const containerHeight = computed(() => display.height.value - 124 - (drawers.video ? 300 : 0))
 
@@ -165,29 +167,35 @@ const onScrollXBottom = (e: Event) => {
     }
 }
 
+const styleProgramRow = () => ({ 
+    bottom: (rowHeight.value * sortedStreams.value.length) + 'px',
+    left: rowHeaderWidth.value + 'px',
+    height: rowHeight.value + 'px',
+    width: pixelsPerHour.value * (hoursOfEpg.value) + 'px'
+})
+
+const getProgramDurationMs = (program:  Omit<SimpleProgramme, "channel">) => program.stop! - (program.start < guideStartTime ? guideStartTime : program.start)
+const getProgramWidth = (program: Omit<SimpleProgramme, "channel">) => getProgramDurationMs(program) / 3600000 * pixelsPerHour.value + 'px'
+
 const styleProgram = (channel: string, index: number) => {
-    return { 
-        width: index ? ((channels[channel][index].stop! - channels[channel][index].start) / 3600000 * pixelsPerHour.value) +  'px' : ((channels[channel][index].stop! - guideStartTime) / 3600000 * (pixelsPerHour.value)) + 'px',
-        height: rowHeight.value + 'px'
+    const program = channels[channel][index]
+    return {
+        display: program.stop! <= guideStartTime ? 'none' : 'inline-block',
+        width: getProgramWidth(program),
+        height: rowHeight.value + 'px',
+        lineHeight: program.description ? (rowHeight.value / 2.4) + 'px' : rowHeight.value + 'px'
     }
 }
-
-const styleProgramShiftText = (stream: Omit<M3uItem, "groupTitle">, index: number) => {
-    if (!stream.tvgId || !channels[stream.tvgId] || !index)
-        return { 'margin-left': `${scrollXPos.value}px` }
-    let now = guideStartTime + (scrollXPos.value / pixelsPerHour.value * 3600000)
-    if (index >= 0 && now < channels[stream.tvgId][index].stop! && now > channels[stream.tvgId][index].start)
-        return { 'margin-left': `${scrollXPos.value - ((channels[stream.tvgId][index].start - guideStartTime) * pixelsPerHour.value / 3600000)}px` }
-    else if (index === -1 && channels[stream.tvgId].length && now > channels[stream.tvgId][channels[stream.tvgId].length - 1].stop!)
-        return { 'margin-left': `${scrollXPos.value - ((channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! - guideStartTime) * pixelsPerHour.value / 3600000)}px` }
+const styleProgramText = (channel: string, index: number) => {
+    const program = channels[channel][index]
+    const now = guideStartTime + (scrollXPos.value / pixelsPerHour.value * 3600000)
+    if (program.start < guideStartTime && program.stop! > guideStartTime)
+       return { 'margin-left': `${scrollXPos.value}px` }
+    if (now < program.stop! && now > program.start)
+      return { 'margin-left': `${scrollXPos.value - ((program.start - guideStartTime) * pixelsPerHour.value / 3600000)}px` }
 }
 
-const isProgramLive = (program: Omit<SimpleProgramme, "channel">) => {
-    return now.value < (program.stop || 0) && now.value >= program.start
-}
-const isProgramDone = (program: Omit<SimpleProgramme, "channel">) => {
-    return now.value > (program.stop || 0)
-}
+const isProgramLive = (program: Omit<SimpleProgramme, "channel">) => now.value < (program.stop || 0) && now.value >= program.start
 
 const scrollTime = computed(() => {
   const time = new Date(guideStartTime)
@@ -254,18 +262,16 @@ const liveXPos = computed(() => Math.floor((now.value - guideStartTime) / 60 / 6
 .now-line {
     position: absolute;
     height: 100%;
-    width: 1px;
-    border-left: 1px dotted rgb(var(--v-theme-info));
+    width: 0px;
+    border-left:2px dotted rgb(var(--v-theme-info));
 }
 
 .now-line-arrow{
-    position:relative;
+    position:relative; 
     top: -24px;
-    left: -12.5px;
+    left: -13px;
     color: rgb(var(--v-theme-info));
 }
-
-
 
 .scroll-y {
     overflow-y: scroll;
@@ -285,11 +291,14 @@ const liveXPos = computed(() => Math.floor((now.value - guideStartTime) / 60 / 6
     left: 0px;
     z-index: 1;
     background-color: rgb(var(--v-theme-background));
-    cursor: pointer;
     user-select: none;
 }
-.row-header-container:hover {
+.channel:hover {
     background-color: rgba(var(--v-border-color), var(--v-idle-opacity));
+    cursor: pointer;
+}
+.channel-active {
+    background-color: rgba(133, 0, 122, 0.2);
 }
 .row-header-container {
     overflow: hidden;
@@ -315,7 +324,7 @@ const liveXPos = computed(() => Math.floor((now.value - guideStartTime) / 60 / 6
     overflow: hidden;
 }
 .program {
-    display: inline-block;
+    position: relative;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -336,6 +345,8 @@ const liveXPos = computed(() => Math.floor((now.value - guideStartTime) / 60 / 6
     cursor: pointer;
 }
 .active {
-    background-color: rgba(133, 0, 122, 0.4);
+    background-color: rgba(133, 0, 122, 0.2) !important;
+    cursor: default;
 }
+
 </style>

@@ -10,8 +10,8 @@
 
     <v-card-text>
       <v-tabs v-model="mode" @update:model-value="clear">
-        <v-tab value="remote" prepend-icon="mdi-link">URL</v-tab>
         <v-tab value="local" prepend-icon="mdi-paperclip">File</v-tab>
+        <v-tab value="remote" prepend-icon="mdi-link">URL</v-tab>
       </v-tabs>
       <v-tabs-window v-model="mode">
         <v-tabs-window-item value="local">
@@ -86,7 +86,7 @@ const emit = defineEmits(['clear'])
 
 const saveUrl = ref(!!localStorage.getItem('m3u-url'))
 
-const mode = ref<'local' | 'remote'>('remote')
+const mode = ref<'local' | 'remote'>(!!localStorage.getItem('m3u-url') ? 'remote' : 'local')
 
 const file = ref<File>()
 const url = ref(localStorage.getItem('m3u-url') || '')

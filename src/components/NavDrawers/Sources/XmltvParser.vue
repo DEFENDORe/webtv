@@ -8,8 +8,8 @@
 
     <v-card-text>
       <v-tabs v-model="mode" @update:model-value="clear">
-        <v-tab value="remote" prepend-icon="mdi-link">URL</v-tab>
         <v-tab value="local" prepend-icon="mdi-paperclip">File</v-tab>
+        <v-tab value="remote" prepend-icon="mdi-link">URL</v-tab>
       </v-tabs>
       <v-tabs-window v-model="mode">
         <v-tabs-window-item value="local">
@@ -79,7 +79,7 @@ type Program = Omit<SimpleProgramme, 'channel'>
 const channels = defineModel<{ [key:string]: Program[] }>('channels', { required: true })
 const scanning = defineModel<{ xmltv: boolean }>('scanning', { required: true })
 
-const mode = ref<'local' | 'remote'>('remote')
+const mode = ref<'local' | 'remote'>(!!localStorage.getItem('xmltv-url') ? 'remote' : 'local')
 
 const saveUrl = ref(!!localStorage.getItem('xmltv-url'))
 
