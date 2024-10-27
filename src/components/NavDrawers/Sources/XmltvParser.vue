@@ -17,7 +17,7 @@
             label="XMLTV File"
             hint="Your IPTV XMLTV file..."
             persistent-hint
-            persistent-clear
+            persistent-clear @click:clear="clear"
             :disabled="progress !== null"
             v-model="file"
             @update:model-value="parse"

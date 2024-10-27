@@ -48,23 +48,23 @@
 
         <!-- PROGRAMS -->
         <div v-for="stream of sortedStreams" :style="styleProgramRow()" class="row">
-          <div v-if="stream.tvgId && channels[stream.tvgId] && channels[stream.tvgId].length"
+          <div v-if="stream.tvgId && cleanChannels[stream.tvgId] && cleanChannels[stream.tvgId].length"
             :style="{ height: rowHeight + 'px' }">
             <!-- NO INFO PROGRAM - START FILLER -->
-            <div v-if="channels[stream.tvgId][0] && channels[stream.tvgId][0].start > guideStartTime"
+            <div v-if="cleanChannels[stream.tvgId][0] && cleanChannels[stream.tvgId][0].start > guideStartTime"
               class="program px-1"
               :class="{
-                live: channels[stream.tvgId][0].start > now,
-                active: channels[stream.tvgId][0].start > now && stream.url === selectedStream?.url
+                live: cleanChannels[stream.tvgId][0].start > now,
+                active: cleanChannels[stream.tvgId][0].start > now && stream.url === selectedStream?.url
               }"
               :style="{ 
-                width: ((channels[stream.tvgId][0].start - guideStartTime) / HOUR * pixelsPerHour) + 'px',
+                width: ((cleanChannels[stream.tvgId][0].start - guideStartTime) / HOUR * pixelsPerHour) + 'px',
                 height: rowHeight + 'px'
               }">
-              <span :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }">No Information</span>
+              <span :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }" style="font-weight: 500;">No Information</span>
             </div>
             <!-- PROGRAMS -->
-            <div v-for="(program, i) of channels[stream.tvgId]" :style="styleProgram(stream.tvgId, i)"
+            <div v-for="(program, i) of cleanChannels[stream.tvgId]" :style="styleProgram(stream.tvgId, i)"
               class="program px-1"
               :class="{
                 'pt-1': program.description,
@@ -72,27 +72,27 @@
                 live: isProgramLive(program)
               }"
               @click="isProgramLive(program) && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
-              <span :style="styleProgramText(stream.tvgId, i)">{{ program.title }}</span>
+              <span :style="styleProgramText(stream.tvgId, i)" style="font-weight: 500;">{{(new Date(program.start)).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }) }} - {{(new Date(program.stop!)).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }) }} - {{ program.title }}</span>
               <br />
               <small :style="styleProgramText(stream.tvgId, i)">{{ program.description }}</small>
             </div>
             <!-- NO INFO PROGRAM - END FILLER -->
-            <div v-if="channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < guideEndTime"
+            <div v-if="cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < guideEndTime"
               class="program px-1"
               :class="{ 
-                live: channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < now,
-                active: selectedStream?.url === stream.url && channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < now
+                live: cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < now,
+                active: selectedStream?.url === stream.url && cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < now
               }"
               style="width: 100%;" :style="{ height: rowHeight + 'px' }"
-              @click="channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < now && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
-              <span :style="styleLastProgramText(stream.tvgId)">No Information</span>
+              @click="cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < now && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
+              <span :style="styleLastProgramText(stream.tvgId)" style="font-weight: 500;">No Information</span>
             </div>
           </div>
           <!-- NO INFO PROGRAM - CHANNEL FILLER -->
           <div v-else :style="[{ height: '100%', width: '100%' }]"
             @click="emit('select', { ...stream, groupTitle: selectedGroup })"
             class="program live px-1" :class="{active: stream.url === selectedStream?.url}">
-            <div :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }">No Information</div>
+            <span :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }" style="font-weight: 500;">No Information</span>
           </div>
 
         </div>
@@ -136,6 +136,8 @@ const { drawers, selectedStream, selectedGroup, streams, channels } = defineProp
   channels: { [key: string]: Omit<SimpleProgramme, "channel">[] }
 }>()
 
+
+// Sort streams alphabetically
 const sortedStreams = computed(() => {
   return streams[selectedGroup]
     .map((s) => ({ ...s, groupTitle: selectedGroup })) // Re-add groupTitle to stream..
@@ -146,11 +148,24 @@ const sortedStreams = computed(() => {
     })
 })
 
+// Sort programs by start date. Set stop to next programs start.
+const cleanChannels = computed(() => {
+  const keys = Object.keys(channels)
+  const newChannels: { [key: string]: Omit<SimpleProgramme, "channel">[] } = {}
+  for (let i = 0; i < keys.length; i++) {
+    newChannels[keys[i]] = channels[keys[i]].sort((a, b) => a.start < b.start ? -1 : 1).filter((p) => p.stop! > guideStartTime.value && p.stop! <= guideEndTime.value)
+    for (let p = 0; p < newChannels[keys[i]].length - 1; p++) {
+      newChannels[keys[i]][p].stop = newChannels[keys[i]][p + 1].start
+    }
+  }
+  return newChannels
+})
+
 const emit = defineEmits<{ select: [value: M3uItem | null] }>()
 
 const now = ref(Date.now())
 const hoursOfEpg = ref(24)
-const hoursOfPast = 6
+const hoursOfPast = 12
 const timelineHeight = ref(40)
 const rowHeight = ref(40)
 const rowHeaderWidth = ref(160)
@@ -222,7 +237,7 @@ const getProgramDurationMs = (program: Omit<SimpleProgramme, "channel">) => prog
 const getProgramWidth = (program: Omit<SimpleProgramme, "channel">) => getProgramDurationMs(program) / HOUR * pixelsPerHour.value + 'px'
 
 const styleProgram = (channel: string, index: number) => {
-  const program = channels[channel][index]
+  const program = cleanChannels.value[channel][index]
   return {
     display: program.stop! <= guideStartTime.value ? 'none' : 'inline-block',
     width: getProgramWidth(program),
@@ -231,14 +246,14 @@ const styleProgram = (channel: string, index: number) => {
   }
 }
 const styleLastProgramText = (channel: string) => {
-  const lastProgram = channels[channel][channels[channel].length - 1]
+  const lastProgram = cleanChannels.value[channel][channels[channel].length - 1]
   return {
     marginLeft: !lastProgram || scrollTime.value < lastProgram.stop! ? '0px' : lastProgram.stop! < guideStartTime.value ? scrollXPos.value +'px' : `${scrollXPos.value - ((lastProgram.stop! - guideStartTime.value) * pixelsPerHour.value / HOUR)}px`,
     lineHeight: rowHeight.value + 'px'
   }
 }
 const styleProgramText = (channel: string, index: number) => {
-  const program = channels[channel][index]
+  const program = cleanChannels.value[channel][index]
   if (program.start < guideStartTime.value && program.stop! > guideStartTime.value)
     return { marginLeft: `${scrollXPos.value}px` }
   if (scrollTime.value > program.start && scrollTime.value < program.stop!)
@@ -351,6 +366,7 @@ const isProgramLive = (program: Omit<SimpleProgramme, "channel">) => now.value <
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;  
   overflow: hidden;
