@@ -2,7 +2,7 @@
   <v-navigation-drawer v-model="drawers.video" width="300px" location="bottom" permanent touchless>
     <v-card height="300px">
       <template v-slot:prepend v-if="selectedStream?.tvgLogo">
-        <v-img :minWidth="100" :height="50" :src="selectedStream?.tvgLogo" lazy-src="@/assets/tv-icon.png" eager />
+        <v-img :minWidth="100" :height="50" :src="selectedStream?.tvgLogo" :lazy-src="TvIconBase64" eager />
       </template>
       <template v-slot:append>
         <small v-if="nowPlaying" class="float-right">
@@ -99,10 +99,11 @@ video {
 <script lang="ts" setup>
 import Hls from 'hls.js'
 import mpegts from 'mpegts.js'
-import type { M3uItem } from '../../lib/M3uParser'
+import type { M3uItem } from '@/lib/M3uParser'
 import { watch, ref, onMounted, computed, useTemplateRef, onBeforeUnmount } from 'vue'
-import type { SimpleProgramme } from '../../lib/XmltvParser'
+import type { SimpleProgramme } from '@/lib/XmltvParser'
 import { useDisplay } from 'vuetify'
+import TvIconBase64 from '@/lib/TvIconBase64'
 type Program = Omit<SimpleProgramme, 'channel'>
 
 const { xs } = useDisplay()

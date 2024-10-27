@@ -12,7 +12,7 @@
       <v-virtual-scroll v-if="selectedGroup" :items="filteredStreams" :height="$vuetify.display.height - (!selectedStream ? 154 : 454)">
         <template v-slot:default="{ item }">
           <v-list-item @click="emit('select', item)" :active="selectedStream?.url === item.url" lines="one">
-            <template v-slot:prepend><div class="streamIcon"><v-img v-if="item.tvgLogo" class="mr-2" :src="item.tvgLogo" lazy-src="@/assets/tv-icon.png"/></div></template>
+            <template v-slot:prepend><div class="streamIcon"><v-img v-if="item.tvgLogo" class="mr-2" :src="item.tvgLogo" :lazy-src="TvIconBase64"/></div></template>
             <template v-slot:title>{{ item.title }}</template>
             <template v-slot:subtitle>{{ getCurrentProgram(item.tvgId)?.title }}</template>
           </v-list-item>
@@ -32,6 +32,7 @@
 
 <script lang="ts" setup>
 import type { M3uItem } from '@/lib/M3uParser'
+import TvIconBase64 from '@/lib/TvIconBase64';
 import type { SimpleProgramme } from '@/lib/XmltvParser'
 import { ref, computed } from 'vue'
 

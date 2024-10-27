@@ -54,8 +54,8 @@
 </template>
 
 <script lang="ts" setup>
-import M3uWorker from '../../../workers/M3uParser?worker'
-import { M3uItem } from '../../../lib/M3uParser'
+import M3uWorker from '@/workers/M3uParser?worker&inline'
+import type { M3uItem } from '@/lib/M3uParser'
 
 import { ref, computed, onMounted } from 'vue'
 

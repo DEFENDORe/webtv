@@ -26,8 +26,8 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 
-import type { M3uItem } from '../../../lib/M3uParser'
-import type { SimpleProgramme } from '../../../lib/XmltvParser'
+import type { M3uItem } from '@/lib/M3uParser'
+import type { SimpleProgramme } from '@/lib/XmltvParser'
 
 import M3uParser from './M3uParser.vue'
 import XmltvParser from './XmltvParser.vue'

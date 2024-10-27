@@ -3,7 +3,7 @@
 
     <!-- top timeline bar, current time, now marker -->
     <div ref="scroll-x-timeline" class="scroll-x-timeline" :onwheel="onWheel" :onscroll="onScrollXBottom"
-      :style="{ height: containerHeight + 'px', lineHeight: timelineHeight + 'px', top: '60px' }">
+      :style="{ height: containerHeight + 'px', lineHeight: timelineHeight + 'px' }">
       <!-- NOW LINE MARKER-->
       <div class="now-line" :style="{ top: timelineHeight + 'px', left: liveXPos + rowHeaderWidth - .5 + 'px' }">
         <v-icon class="ma-0 pa-0 now-line-arrow">mdi-triangle-small-down</v-icon>
@@ -29,75 +29,75 @@
 
     </div>
 
-    <div style="position: relative; width: 100%; z-index: 1;" :style="{ top: timelineHeight + 'px' }">
+    <div class="scroll-y" :style="{ height: containerHeight - timelineHeight - SCROLLBAR_WIDTH + 'px', top: timelineHeight + 60 + 'px' }">
+      <div ref="scroll-x" class="scroll-x"
+        :style="{ width: '100%', height: (sortedStreams.length * rowHeight) + 'px' }">
+        <!-- Channels -->
+        <div v-for="(stream, i) of sortedStreams" :style="{ width: rowHeaderWidth + 'px' }" class="row-header">
+          <!-- Channel -->
+          <div class="row-header-container" :style="{ height: rowHeight + 'px' }"
+            :class="selectedStream?.url === stream.url ? 'channel-active' : 'channel'"
+            @click="selectedStream?.url === stream.url ? undefined : emit('select', { ...stream, groupTitle: selectedGroup })">
+            <span class="d-inline-block">
+              <v-img :lazy-src="TvIconBase64" :src="stream.tvgLogo" alt="tvg-logo"
+                :style="{ width: rowHeight + 'px' }"></v-img>
+            </span>
+            <small class="row-header-title">{{ stream.title }}</small>
+          </div>
+        </div>
 
-      <div class="scroll-y" :style="{ height: containerHeight - 20 + 'px' }">
-        <div ref="scroll-x" class="scroll-x"
-          :style="{ width: '100%', height: (sortedStreams.length * rowHeight) + timelineHeight + 20 + 'px' }">
-          <!-- Channels -->
-          <div v-for="(stream, i) of sortedStreams" :style="{ width: rowHeaderWidth + 'px' }" class="row-header">
-            <!-- Channel -->
-            <div class="row-header-container" :style="{ height: rowHeight + 'px' }"
-              :class="selectedStream?.url === stream.url ? 'channel-active' : 'channel'"
-              @click="selectedStream?.url === stream.url ? undefined : emit('select', { ...stream, groupTitle: selectedGroup })">
-              <span class="d-inline-block">
-                <v-img lazy-src="@/assets/tv-icon.png" :src="stream.tvgLogo" alt="tvg-logo"
-                  :style="{ width: rowHeight + 'px' }"></v-img>
-              </span>
-              <small class="row-header-title d-inline-block">{{ stream.title }}</small>
+        <!-- PROGRAMS -->
+        <div v-for="stream of sortedStreams" :style="styleProgramRow()" class="row">
+          <div v-if="stream.tvgId && channels[stream.tvgId] && channels[stream.tvgId].length"
+            :style="{ height: rowHeight + 'px' }">
+            <!-- NO INFO PROGRAM - START FILLER -->
+            <div v-if="channels[stream.tvgId][0] && channels[stream.tvgId][0].start > guideStartTime"
+              class="program px-1"
+              :class="{
+                live: channels[stream.tvgId][0].start > now,
+                active: channels[stream.tvgId][0].start > now && stream.url === selectedStream?.url
+              }"
+              :style="{ 
+                width: ((channels[stream.tvgId][0].start - guideStartTime) / HOUR * pixelsPerHour) + 'px',
+                height: rowHeight + 'px'
+              }">
+              <span :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }">No Information</span>
+            </div>
+            <!-- PROGRAMS -->
+            <div v-for="(program, i) of channels[stream.tvgId]" :style="styleProgram(stream.tvgId, i)"
+              class="program px-1"
+              :class="{
+                'pt-1': program.description,
+                active: isProgramLive(program) && selectedStream?.url === stream.url,
+                live: isProgramLive(program)
+              }"
+              @click="isProgramLive(program) && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
+              <span :style="styleProgramText(stream.tvgId, i)">{{ program.title }}</span>
+              <br />
+              <small :style="styleProgramText(stream.tvgId, i)">{{ program.description }}</small>
+            </div>
+            <!-- NO INFO PROGRAM - END FILLER -->
+            <div v-if="channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < guideEndTime"
+              class="program px-1"
+              :class="{ 
+                live: channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < now,
+                active: selectedStream?.url === stream.url && channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < now
+              }"
+              style="width: 100%;" :style="{ height: rowHeight + 'px' }"
+              @click="channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < now && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
+              <span :style="styleLastProgramText(stream.tvgId)">No Information</span>
             </div>
           </div>
-
-          <!-- PROGRAMS -->
-          <div v-for="stream of sortedStreams" :style="styleProgramRow()" class="row">
-            <div v-if="stream.tvgId && channels[stream.tvgId] && channels[stream.tvgId].length"
-              :style="{ height: rowHeight + 'px' }">
-              <!-- NO INFO PROGRAM - START FILLER -->
-              <div v-if="channels[stream.tvgId][0] && channels[stream.tvgId][0].start > guideStartTime"
-                class="program px-1"
-                :style="{ 
-                  width: ((channels[stream.tvgId][0].start - guideStartTime) / HOUR * pixelsPerHour) + 'px',
-                  height: rowHeight + 'px'
-                }">
-                <span :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }">No Information</span>
-              </div>
-              <!-- PROGRAMS -->
-              <div v-for="(program, i) of channels[stream.tvgId]" :style="styleProgram(stream.tvgId, i)"
-                class="program px-1"
-                :class="{ 
-                  'pt-1': program.description,
-                  active: isProgramLive(program) && selectedStream?.url === stream.url,
-                  live: isProgramLive(program)
-                }"
-                @click="isProgramLive(program) && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
-                <span :style="styleProgramText(stream.tvgId, i)">{{ program.title }}</span>
-                <br />
-                <small :style="styleProgramText(stream.tvgId, i)">{{ program.description }}</small>
-              </div>
-              <!-- NO INFO PROGRAM - END FILLER -->
-              <div v-if="channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < guideEndTime"
-                class="program px-1"
-                :class="{ 
-                  live: channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < now,
-                  active: selectedStream?.url === stream.url && channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < now
-                }"
-                style="width: 100%;" :style="{ height: rowHeight + 'px' }"
-                @click="channels[stream.tvgId][channels[stream.tvgId].length - 1].stop! < now && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
-                <span :style="styleLastProgramText(stream.tvgId)">No Information</span>
-              </div>
-            </div>
-            <!-- NO INFO PROGRAM - CHANNEL FILLER -->
-            <div v-else :style="[{ height: '100%', width: '100%' }]"
-              @click="emit('select', { ...stream, groupTitle: selectedGroup })" class="program live px-1">
-              <div :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }">No Information</div>
-            </div>
-
+          <!-- NO INFO PROGRAM - CHANNEL FILLER -->
+          <div v-else :style="[{ height: '100%', width: '100%' }]"
+            @click="emit('select', { ...stream, groupTitle: selectedGroup })"
+            class="program live px-1" :class="{active: stream.url === selectedStream?.url}">
+            <div :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }">No Information</div>
           </div>
+
         </div>
       </div>
     </div>
-
-    
   </v-container>
 </template>
 
@@ -110,7 +110,11 @@ import type { SimpleProgramme } from '@/lib/XmltvParser'
 import { ref, computed, useTemplateRef, onMounted, onBeforeUnmount } from 'vue'
 import { useDisplay } from 'vuetify'
 
+import { getScrollBarWidth } from '@/lib/GetScrollbarWidth'
+import TvIconBase64 from '@/lib/TvIconBase64'
+
 const HOUR = 3600000 //ms
+const SCROLLBAR_WIDTH = getScrollBarWidth() || 6
 
 onMounted(() => {
   scrollToThisHalfHour()
@@ -201,7 +205,7 @@ const onWheel = (e: WheelEvent) => scrollXTimeline.value!.scrollLeft! += e.delta
 
 const onScrollXBottom = (e: Event) => {
   e.preventDefault()
-  if (e.target && 'scrollLeft' in e.target && typeof e.target.scrollLeft === 'number' && scrollX.value) {
+  if (e.target && 'scrollLeft' in e.target && typeof e.target.scrollLeft === 'number' && scrollX.value && e.target.scrollLeft >= 0 && e.target.scrollLeft <= hoursOfEpg.value * pixelsPerHour.value) {
     scrollXPos.value = e.target.scrollLeft
     scrollX.value.scrollLeft = e.target.scrollLeft
   }
@@ -247,11 +251,12 @@ const isProgramLive = (program: Omit<SimpleProgramme, "channel">) => now.value <
 
 <style lang="css" scoped>
 .scroll-x-timeline {
-  position: absolute;
   width: 100%;
   overflow-x: scroll;
   overflow-y: hidden;
+  scrollbar-gutter: stable;
   white-space: nowrap;
+  position: relative;
 }
 
 .timeline-hour {
@@ -300,7 +305,9 @@ const isProgramLive = (program: Omit<SimpleProgramme, "channel">) => now.value <
 }
 
 .scroll-y {
+  position: absolute;
   overflow-y: scroll;
+  scrollbar-gutter: stable;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   width: 100%;
@@ -342,8 +349,11 @@ const isProgramLive = (program: Omit<SimpleProgramme, "channel">) => now.value <
 
 .row-header-title {
   overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;  
+  overflow: hidden;
   width: 100%;
   margin-left: 4px;
   margin-right: 4px;

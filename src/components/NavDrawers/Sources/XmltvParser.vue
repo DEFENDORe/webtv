@@ -68,11 +68,12 @@
 
 <script lang="ts" setup>
 
-import XmltvParserWorker from '../../../workers/XmltvParser?worker'
+import XmltvParserWorker from '@/workers/XmltvParser?worker&inline'
+import type { SimpleProgramme } from '@/lib/XmltvParser'
 
 import { ref, computed, onMounted } from 'vue'
 
-import type { SimpleProgramme } from '../../../lib/XmltvParser'
+
 
 type Program = Omit<SimpleProgramme, 'channel'>
 
