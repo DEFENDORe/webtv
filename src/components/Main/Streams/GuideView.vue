@@ -29,11 +29,12 @@
 
     </div>
 
-    <div class="scroll-y" :style="{ height: containerHeight - timelineHeight - SCROLLBAR_WIDTH + 'px', top: timelineHeight + 60 + 'px' }">
+    <div ref="scroll-y" class="scroll-y" :style="{ height: containerHeight - timelineHeight - SCROLLBAR_WIDTH + 'px', top: timelineHeight + 60 + 'px' }">
+      <div ref="scroll-y-top" class="scroll-y-top" :style="{ height: 0 + 'px'  }" style="background-color: red; "></div>
       <div ref="scroll-x" class="scroll-x"
-        :style="{ width: '100%', height: (sortedStreams.length * rowHeight) + 'px' }">
+        :style="{ width: '100%', height: (limitedStreams.length * rowHeight) + 'px' }">
         <!-- Channels -->
-        <div v-for="(stream, i) of sortedStreams" :style="{ width: rowHeaderWidth + 'px' }" class="row-header">
+        <div v-for="(stream, i) of limitedStreams" :style="{ width: rowHeaderWidth + 'px' }" class="row-header" :data-index="i">
           <!-- Channel -->
           <div class="row-header-container" :style="{ height: rowHeight + 'px' }"
             :class="selectedStream?.url === stream.url ? 'channel-active' : 'channel'"
@@ -47,7 +48,7 @@
         </div>
 
         <!-- PROGRAMS -->
-        <div v-for="stream of sortedStreams" :style="styleProgramRow()" class="row">
+        <div v-for="stream of limitedStreams" :style="styleProgramRow()" class="row">
           <div v-if="stream.tvgId && cleanChannels[stream.tvgId] && cleanChannels[stream.tvgId].length"
             :style="{ height: rowHeight + 'px' }">
             <!-- NO INFO PROGRAM - START FILLER -->
@@ -72,14 +73,14 @@
                 live: isProgramLive(program)
               }"
               @click="isProgramLive(program) && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
-              <span :style="styleProgramText(stream.tvgId, i)" style="font-weight: 500;">{{(new Date(program.start)).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }) }} - {{(new Date(program.stop!)).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }) }} - {{ program.title }}</span>
+              <span :style="styleProgramText(stream.tvgId, i)" style="font-weight: 500;">{{ program.title }}</span>
               <br />
               <small :style="styleProgramText(stream.tvgId, i)">{{ program.description }}</small>
             </div>
             <!-- NO INFO PROGRAM - END FILLER -->
             <div v-if="cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < guideEndTime"
               class="program px-1"
-              :class="{ 
+              :class="{
                 live: cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < now,
                 active: selectedStream?.url === stream.url && cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < now
               }"
@@ -97,6 +98,18 @@
 
         </div>
       </div>
+      <div ref="scroll-y-bottom" class="scroll-y-bottom" :style="{
+        height: ((sortedStreams.length - (topIndex + visibleChannelCount)) < 0 ? 0 : (sortedStreams.length - (topIndex + visibleChannelCount))) * rowHeight + 'px'
+      }"></div>
+    </div>
+    <!-- Intersect Observer Dev Helper-->
+    <div v-if="DEV" style="position: absolute; right: 50px; top: 200px; background-color: green;">
+      sortedStreams.length: {{ sortedStreams.length }}<br/>
+      limitedStreams.length: {{ limitedStreams.length }}<br/>
+      visibleChannelCount: {{ visibleChannelCount}}<br/>
+      topIndex: {{ topIndex }},<br/>
+      topBuffer (channel): fuck the top padding<br/>
+      bottomBuffer (channels): {{ bottomBuffer }}
     </div>
   </v-container>
 </template>
@@ -107,17 +120,58 @@
 import type { M3uItem } from '@/lib/M3uParser'
 import type { SimpleProgramme } from '@/lib/XmltvParser'
 
-import { ref, computed, useTemplateRef, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, useTemplateRef, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 
 import { getScrollBarWidth } from '@/lib/GetScrollbarWidth'
 import TvIconBase64 from '@/lib/TvIconBase64'
 
+const DEV = false
+
 const HOUR = 3600000 //ms
 const SCROLLBAR_WIDTH = getScrollBarWidth() || 6
 
+
+const topIndex = ref(0)
+const visibleChannelCount = ref(0)
+const bottomBuffer = computed(() => (sortedStreams.value.length - (topIndex.value + visibleChannelCount.value)) < 0 ? 0 : (sortedStreams.value.length - (topIndex.value + visibleChannelCount.value)))
+
+let intersectObserverCleanupTimeout: NodeJS.Timeout | null = null
+
 onMounted(() => {
+  console.log('MOUNTED')
+  visibleChannelCount.value = !scrollY.value?.clientHeight ? 0 : Math.ceil(scrollY.value.clientHeight / rowHeight.value)
   scrollToThisHalfHour()
+  const observer = new IntersectionObserver((entries) => {
+    visibleChannelCount.value = !scrollY.value?.clientHeight ? 0 : Math.ceil(scrollY.value.clientHeight / rowHeight.value)
+    if (intersectObserverCleanupTimeout)
+      clearTimeout(intersectObserverCleanupTimeout)
+    
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          if (entry.target.classList.contains('scroll-y-top')) {
+            console.log('HIT TOP')
+            if (topIndex.value - visibleChannelCount.value < 0)
+              topIndex.value = 0 
+            else
+              topIndex.value -= visibleChannelCount.value
+          } else if (entry.target.classList.contains('scroll-y-bottom')) {
+            console.log('HIT BOTTOM')
+            const maxIndex = sortedStreams.value.length - visibleChannelCount.value
+            if (maxIndex >= 0)
+              topIndex.value = topIndex.value + (visibleChannelCount.value * 2) >= sortedStreams.value.length - (visibleChannelCount.value * 2) ? sortedStreams.value.length - visibleChannelCount.value : topIndex.value + visibleChannelCount.value
+          }
+          intersectObserverCleanupTimeout = setTimeout(() => {
+            topIndex.value = Math.floor((scrollY.value?.scrollTop || 0) / rowHeight.value) + visibleChannelCount.value
+            setTimeout(() => {
+              topIndex.value = Math.floor((scrollY.value?.scrollTop || 0) / rowHeight.value) + visibleChannelCount.value
+            }, 400)
+          }, 100)
+        }
+    })
+  }, { root: scrollY.value })
+  observer.observe(scrollYTop.value!)
+  observer.observe(scrollYBottom.value!)
 })
 onBeforeUnmount(() => {
   clearInterval(timerInterval)
@@ -127,6 +181,9 @@ const display = useDisplay()
 
 const scrollXTimeline = useTemplateRef('scroll-x-timeline')
 const scrollX = useTemplateRef('scroll-x')
+const scrollY = useTemplateRef('scroll-y')
+const scrollYTop = useTemplateRef('scroll-y-top')
+const scrollYBottom = useTemplateRef('scroll-y-bottom')
 
 const { drawers, selectedStream, selectedGroup, streams, channels } = defineProps<{
   drawers: { video: boolean },
@@ -135,6 +192,13 @@ const { drawers, selectedStream, selectedGroup, streams, channels } = defineProp
   streams: { [key: string]: Omit<M3uItem, "groupTitle">[] },
   channels: { [key: string]: Omit<SimpleProgramme, "channel">[] }
 }>()
+
+watch(() => selectedGroup, (newGroup, oldGroup) => {
+  console.log('NEW GROUP')
+  scrollY.value?.scrollTo(0, 0)
+  scrollToThisHalfHour()
+  topIndex.value = 0
+})
 
 
 // Sort streams alphabetically
@@ -148,7 +212,10 @@ const sortedStreams = computed(() => {
     })
 })
 
+const limitedStreams = computed(() => sortedStreams.value.slice(0, topIndex.value + (visibleChannelCount.value)))
+// Normailze programs
 // Sort programs by start date. Set stop to next programs start.
+// TODO: Add a "No Information" program for every gap in lineup
 const cleanChannels = computed(() => {
   const keys = Object.keys(channels)
   const newChannels: { [key: string]: Omit<SimpleProgramme, "channel">[] } = {}
@@ -198,8 +265,8 @@ const nowHalfHour = computed(() => {
   return thisHalfHour.getTime()
 })
 
-const halfHourXPos = computed(() => Math.floor(((now.value >= nowHalfHour.value ? nowHalfHour.value : nowHour.value) - guideStartTime.value) / 60 / 60 / 1000 * pixelsPerHour.value))
-const liveXPos = computed(() => Math.floor((now.value - guideStartTime.value) / 60 / 60 / 1000 * pixelsPerHour.value))
+const halfHourXPos = computed(() => Math.floor(((now.value >= nowHalfHour.value ? nowHalfHour.value : nowHour.value) - guideStartTime.value) / HOUR * pixelsPerHour.value))
+const liveXPos = computed(() => Math.floor((now.value - guideStartTime.value) / HOUR * pixelsPerHour.value))
 
 const timerInterval = setInterval(() => {
   now.value = Date.now()
@@ -227,7 +294,7 @@ const onScrollXBottom = (e: Event) => {
 }
 
 const styleProgramRow = () => ({
-  bottom: (rowHeight.value * sortedStreams.value.length) + 'px',
+  bottom: (rowHeight.value * limitedStreams.value.length) + 'px',
   left: rowHeaderWidth.value + 'px',
   height: rowHeight.value + 'px',
   width: pixelsPerHour.value * (hoursOfEpg.value) + 'px'
@@ -246,7 +313,7 @@ const styleProgram = (channel: string, index: number) => {
   }
 }
 const styleLastProgramText = (channel: string) => {
-  const lastProgram = cleanChannels.value[channel][channels[channel].length - 1]
+  const lastProgram = cleanChannels.value[channel][cleanChannels.value[channel].length - 1]
   return {
     marginLeft: !lastProgram || scrollTime.value < lastProgram.stop! ? '0px' : lastProgram.stop! < guideStartTime.value ? scrollXPos.value +'px' : `${scrollXPos.value - ((lastProgram.stop! - guideStartTime.value) * pixelsPerHour.value / HOUR)}px`,
     lineHeight: rowHeight.value + 'px'
