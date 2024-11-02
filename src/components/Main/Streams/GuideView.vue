@@ -5,8 +5,8 @@
     <div ref="scroll-x-timeline" class="scroll-x-timeline" :onwheel="onWheel" :onscroll="onScrollXBottom"
       :style="{ height: containerHeight + 'px', lineHeight: timelineHeight + 'px' }">
       <!-- NOW LINE MARKER-->
-      <div class="now-line" :style="{ top: timelineHeight + 'px', left: liveXPos + rowHeaderWidth - .5 + 'px' }">
-        <v-icon class="ma-0 pa-0 now-line-arrow">mdi-triangle-small-down</v-icon>
+      <div class="now-line" :style="{ top: timelineHeight + 'px', left: 0, width: liveXPos + rowHeaderWidth - .5 + 'px' }">
+        <v-icon class="ma-0 pa-0 now-line-arrow" size="large">mdi-triangle-small-down</v-icon>
       </div>
 
       <!-- CURRENT TIME -->
@@ -22,94 +22,93 @@
       <!-- TIMELINE HOURS -->
       <div v-for="i in hoursOfEpg" class="timeline-hour pr-2"
         :style="{ width: pixelsPerHour + 'px', height: timelineHeight + 'px' }">
-        <span :style="{ width: pixelsPerHour / 2 + 'px' }" class="pr-2 timeline-half-hour"
-          draggable>{{ getTimeline(i).replace('00', '30') }}</span>
+        <span :style="{ width: pixelsPerHour / 2 + 'px' }" class="pr-2 timeline-half-hour" draggable>{{
+          getTimeline(i).replace('00', '30') }}</span>
         {{ getTimeline(i + 1) }}
       </div>
 
     </div>
 
-    <div ref="scroll-y" class="scroll-y" :style="{ height: containerHeight - timelineHeight - SCROLLBAR_WIDTH + 'px', top: timelineHeight + 60 + 'px' }">
-      <div ref="scroll-y-top" class="scroll-y-top" :style="{ height: 0 + 'px'  }" style="background-color: red; "></div>
+    <div ref="scroll-y" class="scroll-y"
+      :style="{ height: containerHeight - timelineHeight - SCROLLBAR_WIDTH + 'px', top: timelineHeight + 60 + 'px' }">
+      <div ref="scroll-y-top" class="scroll-y-top" :style="{ height: 0 + 'px' }" style="background-color: red; "></div>
       <div ref="scroll-x" class="scroll-x"
         :style="{ width: '100%', height: (limitedStreams.length * rowHeight) + 'px' }">
-        <!-- Channels -->
-        <div v-for="(stream, i) of limitedStreams" :style="{ width: rowHeaderWidth + 'px' }" class="row-header" :data-index="i">
-          <!-- Channel -->
-          <div class="row-header-container" :style="{ height: rowHeight + 'px' }"
-            :class="selectedStream?.url === stream.url ? 'channel-active' : 'channel'"
-            @click="selectedStream?.url === stream.url ? undefined : emit('select', { ...stream, groupTitle: selectedGroup })">
-            <span class="d-inline-block">
-              <v-img :lazy-src="TvIconBase64" :src="stream.tvgLogo" alt="tvg-logo"
-                :style="{ width: rowHeight + 'px' }"></v-img>
-            </span>
-            <small class="row-header-title">{{ stream.title }}</small>
-          </div>
-        </div>
 
-        <!-- PROGRAMS -->
-        <div v-for="stream of limitedStreams" :style="styleProgramRow()" class="row">
-          <div v-if="stream.tvgId && cleanChannels[stream.tvgId] && cleanChannels[stream.tvgId].length"
-            :style="{ height: rowHeight + 'px' }">
-            <!-- NO INFO PROGRAM - START FILLER -->
-            <div v-if="cleanChannels[stream.tvgId][0] && cleanChannels[stream.tvgId][0].start > guideStartTime"
-              class="program px-1"
-              :class="{
-                live: cleanChannels[stream.tvgId][0].start > now,
-                active: cleanChannels[stream.tvgId][0].start > now && stream.url === selectedStream?.url
-              }"
-              :style="{ 
+        <div v-for="(stream, i) of limitedStreams"
+          :style="{ width: pixelsPerHour * hoursOfEpg + 'px', height: rowHeight + 'px' }">
+          <!-- Channels -->
+          <div :style="{ width: rowHeaderWidth + 'px' }" class="row-header">
+            <!-- Channel -->
+            <div class="row-header-container" :style="{ height: rowHeight + 'px' }"
+              :class="selectedStream?.url === stream.url ? 'channel-active' : 'channel'"
+              @click="selectedStream?.url === stream.url ? undefined : emit('select', { ...stream, groupTitle: selectedGroup })">
+              <span class="d-inline-block">
+                <v-img :lazy-src="TvIconBase64" :src="stream.tvgLogo" alt="tvg-logo"
+                  :style="{ width: rowHeight + 'px' }"></v-img>
+              </span>
+              <small class="row-header-title">{{ stream.title }}</small>
+            </div>
+          </div>
+
+          <!-- PROGRAMS -->
+          <div :style="styleProgramRow()" class="row">
+            <div v-if="stream.tvgId && cleanChannels[stream.tvgId] && cleanChannels[stream.tvgId].length"
+              :style="{ height: rowHeight + 'px' }">
+              <!-- NO INFO PROGRAM - START FILLER -->
+              <div v-if="cleanChannels[stream.tvgId][0] && cleanChannels[stream.tvgId][0].start > guideStartTime"
+                class="program px-1" :class="{
+                  live: cleanChannels[stream.tvgId][0].start > now,
+                  active: cleanChannels[stream.tvgId][0].start > now && stream.url === selectedStream?.url
+                }" :style="{
                 width: ((cleanChannels[stream.tvgId][0].start - guideStartTime) / HOUR * pixelsPerHour) + 'px',
                 height: rowHeight + 'px'
               }">
-              <span :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }" style="font-weight: 500;">No Information</span>
+                <span :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }"
+                  style="font-weight: 500;">No Information</span>
+              </div>
+              <!-- PROGRAMS -->
+              <div v-for="(program, i) of cleanChannels[stream.tvgId]" :style="styleProgram(stream.tvgId, i)"
+                class="program px-1" :class="{
+                  'pt-1': program.description,
+                  active: isProgramLive(program) && selectedStream?.url === stream.url,
+                  live: isProgramLive(program)
+                }"
+                @click="isProgramLive(program) && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
+                <span :style="styleProgramText(stream.tvgId, i)" style="font-weight: 500;">{{ program.title }}</span>
+                <br />
+                <small :style="styleProgramText(stream.tvgId, i)">{{ program.description }}</small>
+              </div>
+              <!-- NO INFO PROGRAM - END FILLER -->
+              <div v-if="cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < guideEndTime"
+                class="program px-1" :class="{
+                  live: cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < now,
+                  active: selectedStream?.url === stream.url && cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < now
+                }" style="width: 100%;" :style="{ height: rowHeight + 'px' }"
+                @click="cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < now && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
+                <span :style="styleLastProgramText(stream.tvgId)" style="font-weight: 500;">No Information</span>
+              </div>
             </div>
-            <!-- PROGRAMS -->
-            <div v-for="(program, i) of cleanChannels[stream.tvgId]" :style="styleProgram(stream.tvgId, i)"
-              class="program px-1"
-              :class="{
-                'pt-1': program.description,
-                active: isProgramLive(program) && selectedStream?.url === stream.url,
-                live: isProgramLive(program)
-              }"
-              @click="isProgramLive(program) && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
-              <span :style="styleProgramText(stream.tvgId, i)" style="font-weight: 500;">{{ program.title }}</span>
-              <br />
-              <small :style="styleProgramText(stream.tvgId, i)">{{ program.description }}</small>
+            <!-- NO INFO PROGRAM - CHANNEL FILLER -->
+            <div v-else :style="[{ height: '100%', width: '100%' }]"
+              @click="emit('select', { ...stream, groupTitle: selectedGroup })" class="program live px-1"
+              :class="{ active: stream.url === selectedStream?.url }">
+              <span :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }"
+                style="font-weight: 500;">No Information</span>
             </div>
-            <!-- NO INFO PROGRAM - END FILLER -->
-            <div v-if="cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < guideEndTime"
-              class="program px-1"
-              :class="{
-                live: cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < now,
-                active: selectedStream?.url === stream.url && cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < now
-              }"
-              style="width: 100%;" :style="{ height: rowHeight + 'px' }"
-              @click="cleanChannels[stream.tvgId][cleanChannels[stream.tvgId].length - 1].stop! < now && selectedStream?.url !== stream.url ? emit('select', { ...stream, groupTitle: selectedGroup }) : undefined">
-              <span :style="styleLastProgramText(stream.tvgId)" style="font-weight: 500;">No Information</span>
-            </div>
-          </div>
-          <!-- NO INFO PROGRAM - CHANNEL FILLER -->
-          <div v-else :style="[{ height: '100%', width: '100%' }]"
-            @click="emit('select', { ...stream, groupTitle: selectedGroup })"
-            class="program live px-1" :class="{active: stream.url === selectedStream?.url}">
-            <span :style="{ marginLeft: scrollXPos + 'px', lineHeight: rowHeight + 'px' }" style="font-weight: 500;">No Information</span>
-          </div>
 
+          </div>
         </div>
       </div>
-      <div ref="scroll-y-bottom" class="scroll-y-bottom" :style="{
-        height: ((sortedStreams.length - (topIndex + visibleChannelCount)) < 0 ? 0 : (sortedStreams.length - (topIndex + visibleChannelCount))) * rowHeight + 'px'
-      }"></div>
+      <div ref="scroll-y-bottom" class="scroll-y-bottom" :style="{ height: bottomBuffer * rowHeight + 'px' }"></div>
+
     </div>
-    <!-- Intersect Observer Dev Helper-->
-    <div v-if="DEV" style="position: absolute; right: 50px; top: 200px; background-color: green;">
-      sortedStreams.length: {{ sortedStreams.length }}<br/>
-      limitedStreams.length: {{ limitedStreams.length }}<br/>
-      visibleChannelCount: {{ visibleChannelCount}}<br/>
-      topIndex: {{ topIndex }},<br/>
-      topBuffer (channel): fuck the top padding<br/>
-      bottomBuffer (channels): {{ bottomBuffer }}
+    <div
+      style="position: absolute; height: 200px; width: 400px; top: 200px; left: 500px; background-color: greenyellow; color: blue;">
+      <div><strong>topIndex: </strong>{{ topIndex }}</div>
+      <div><strong>pageCount: </strong>{{ visibleChannelCount }}</div>
+      <div><strong>limitedStreams.length: </strong>{{ limitedStreams.length }}</div>
+      <div><strong>sortedStreams.length: </strong>{{ sortedStreams.length }}</div>
     </div>
   </v-container>
 </template>
@@ -126,12 +125,10 @@ import { useDisplay } from 'vuetify'
 import { getScrollBarWidth } from '@/lib/GetScrollbarWidth'
 import TvIconBase64 from '@/lib/TvIconBase64'
 
-const DEV = false
-
 const HOUR = 3600000 //ms
 const SCROLLBAR_WIDTH = getScrollBarWidth() || 6
 
-
+const limitedStreams = computed(() => sortedStreams.value.slice(0, topIndex.value + (visibleChannelCount.value)))
 const topIndex = ref(0)
 const visibleChannelCount = ref(0)
 const bottomBuffer = computed(() => (sortedStreams.value.length - (topIndex.value + visibleChannelCount.value)) < 0 ? 0 : (sortedStreams.value.length - (topIndex.value + visibleChannelCount.value)))
@@ -139,27 +136,27 @@ const bottomBuffer = computed(() => (sortedStreams.value.length - (topIndex.valu
 let intersectObserverCleanupTimeout: NodeJS.Timeout | null = null
 
 onMounted(() => {
-  console.log('MOUNTED')
   visibleChannelCount.value = !scrollY.value?.clientHeight ? 0 : Math.ceil(scrollY.value.clientHeight / rowHeight.value)
   scrollToThisHalfHour()
   const observer = new IntersectionObserver((entries) => {
     visibleChannelCount.value = !scrollY.value?.clientHeight ? 0 : Math.ceil(scrollY.value.clientHeight / rowHeight.value)
     if (intersectObserverCleanupTimeout)
       clearTimeout(intersectObserverCleanupTimeout)
-    
+
     entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          if (entry.target.classList.contains('scroll-y-top')) {
-            console.log('HIT TOP')
-            if (topIndex.value - visibleChannelCount.value < 0)
-              topIndex.value = 0 
-            else
-              topIndex.value -= visibleChannelCount.value
-          } else if (entry.target.classList.contains('scroll-y-bottom')) {
-            console.log('HIT BOTTOM')
-            const maxIndex = sortedStreams.value.length - visibleChannelCount.value
-            if (maxIndex >= 0)
-              topIndex.value = topIndex.value + (visibleChannelCount.value * 2) >= sortedStreams.value.length - (visibleChannelCount.value * 2) ? sortedStreams.value.length - visibleChannelCount.value : topIndex.value + visibleChannelCount.value
+      if (entry.isIntersecting) {
+        if (entry.target.classList.contains('scroll-y-top')) {
+          console.log('HIT TOP')
+          if (topIndex.value - visibleChannelCount.value < 0)
+            topIndex.value = 0
+          else
+            topIndex.value -= visibleChannelCount.value
+        } else if (entry.target.classList.contains('scroll-y-bottom')) {
+          console.log('HIT BOTTOM')
+          if (topIndex.value + visibleChannelCount.value >= sortedStreams.value.length - visibleChannelCount.value) {
+            topIndex.value = sortedStreams.value.length - visibleChannelCount.value
+          } else {
+            topIndex.value += visibleChannelCount.value
           }
           intersectObserverCleanupTimeout = setTimeout(() => {
             topIndex.value = Math.floor((scrollY.value?.scrollTop || 0) / rowHeight.value) + visibleChannelCount.value
@@ -168,6 +165,7 @@ onMounted(() => {
             }, 400)
           }, 100)
         }
+      }
     })
   }, { root: scrollY.value })
   observer.observe(scrollYTop.value!)
@@ -212,7 +210,7 @@ const sortedStreams = computed(() => {
     })
 })
 
-const limitedStreams = computed(() => sortedStreams.value.slice(0, topIndex.value + (visibleChannelCount.value)))
+
 // Normailze programs
 // Sort programs by start date. Set stop to next programs start.
 // TODO: Add a "No Information" program for every gap in lineup
@@ -294,10 +292,9 @@ const onScrollXBottom = (e: Event) => {
 }
 
 const styleProgramRow = () => ({
-  bottom: (rowHeight.value * limitedStreams.value.length) + 'px',
   left: rowHeaderWidth.value + 'px',
   height: rowHeight.value + 'px',
-  width: pixelsPerHour.value * (hoursOfEpg.value) + 'px'
+  transform: `translateY(-${rowHeight.value}px)`,
 })
 
 const getProgramDurationMs = (program: Omit<SimpleProgramme, "channel">) => program.stop! - (program.start < guideStartTime.value ? guideStartTime.value : program.start)
@@ -315,7 +312,7 @@ const styleProgram = (channel: string, index: number) => {
 const styleLastProgramText = (channel: string) => {
   const lastProgram = cleanChannels.value[channel][cleanChannels.value[channel].length - 1]
   return {
-    marginLeft: !lastProgram || scrollTime.value < lastProgram.stop! ? '0px' : lastProgram.stop! < guideStartTime.value ? scrollXPos.value +'px' : `${scrollXPos.value - ((lastProgram.stop! - guideStartTime.value) * pixelsPerHour.value / HOUR)}px`,
+    marginLeft: !lastProgram || scrollTime.value < lastProgram.stop! ? '0px' : lastProgram.stop! < guideStartTime.value ? scrollXPos.value + 'px' : `${scrollXPos.value - ((lastProgram.stop! - guideStartTime.value) * pixelsPerHour.value / HOUR)}px`,
     lineHeight: rowHeight.value + 'px'
   }
 }
@@ -381,8 +378,8 @@ const isProgramLive = (program: Omit<SimpleProgramme, "channel">) => now.value <
 
 .now-line-arrow {
   position: relative;
-  top: -24px;
-  left: -13px;
+  bottom: 26px;
+  transform: translateX(calc(-50% - 1px));
   color: rgb(var(--v-theme-info));
 }
 
@@ -435,7 +432,7 @@ const isProgramLive = (program: Omit<SimpleProgramme, "channel">) => now.value <
   display: -webkit-box;
   line-clamp: 2;
   -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;  
+  -webkit-box-orient: vertical;
   overflow: hidden;
   width: 100%;
   margin-left: 4px;
