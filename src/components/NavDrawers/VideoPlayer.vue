@@ -63,10 +63,10 @@
                 <v-divider class="my-1" />
                 <div><b>title:</b> {{ selectedStream?.title || '?' }}</div>
                 <div><b>group-title:</b> {{ selectedStream?.groupTitle || '?' }}</div>
-                <div><b>url:</b> {{ selectedStream?.url || '?' }}</div>
+                <div><b>url:</b> <span :class="{ blurryText: privacyMode }">{{ selectedStream?.url || '?' }}</span></div>
                 <div><b>tvg-id:</b> {{ selectedStream?.tvgId || '?' }}</div>
                 <div><b>tvg-name:</b> {{ selectedStream?.tvgName || '?' }}</div>
-                <div><b>tvg-logo:</b> {{ selectedStream?.tvgLogo || '?' }}</div>
+                <div><b>tvg-logo:</b> <span :class="{ blurryText: privacyMode }">{{ selectedStream?.tvgLogo || '?' }}</span></div>
               </v-col>
 
               <v-col v-if="videoInfo" cols="12" class="pt-0">
@@ -94,6 +94,9 @@ video {
   width: inherit;
   height: 210px;
 }
+.blurryText {
+  filter: blur(4px)
+}
 </style>
 
 <script lang="ts" setup>
@@ -110,7 +113,7 @@ const { xs } = useDisplay()
 
 const drawers = defineModel<{ video: boolean }>('drawers', { required: true })
 const selectedStream = defineModel<null | M3uItem>('selectedStream', { required: true })
-const { channels } = defineProps<{ channels: { [key: string]: Program[] } }>()
+const { channels, privacyMode } = defineProps<{ channels: { [key: string]: Program[] }, privacyMode: boolean }>()
 
 const video = useTemplateRef('video')
 const videoInfo = ref<{ height: number, width: number, duration: number }>()

@@ -1,22 +1,32 @@
 WebTV
 ======
 
-A web app for consuming IPTV via m3u and xmltv files. 
+A web app for consuming IPTV via m3u and xmltv files.
 
+### [Demo Video](https://youtu.be/Was9Yt03yF4)
+[![Demo Video](https://img.youtube.com/vi/Was9Yt03yF4/0.jpg)](https://youtu.be/Was9Yt03yF4)
 
-[HLS.js](https://github.com/video-dev/hls.js) for m3u8 playback
-
-[mpegts.js](https://github.com/xqq/mpegts.js/) for ts playback
-
-
+## Features
+- Run locally, without a server. Just open the html file in a browser.
+- Full EPG guide with responsive layout
+- Apply group-title filters during m3u scan
+- Both XML and M3U parsers are run inside Workers, as to not block UI
+- Supports large xmltv and m3u files. (Tested with 300MB+ m3u and 20MB+ xml files)
+- Add your M3U and/or XMLTV file(s) via File upload or URL
+- Save URL's to LocalStorage; automatically scan file(s) on page refresh
+- Uses [mpegts.js](https://github.com/xqq/mpegts.js/) and [hls.js](https://github.com/video-dev/hls.js) for playback
 
 ## Install
 ```
 npm install
 ```
 
+## Build
+```
+npm run build
+```
+The project is built to the `./dist` directory. Either host this directory or just open the `index.html` file.
 ## Development
-
 ```
 npm run dev
 ```

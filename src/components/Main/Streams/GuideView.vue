@@ -5,7 +5,7 @@
     <div ref="scroll-x-timeline" class="scroll-x-timeline" :onwheel="onWheel" :onscroll="onScrollXBottom"
       :style="{ height: containerHeight + 'px', lineHeight: timelineHeight + 'px' }">
       <!-- NOW LINE MARKER-->
-      <div class="now-line" :style="{ top: timelineHeight + 'px', left: 0, width: liveXPos + rowHeaderWidth - .5 + 'px' }">
+      <div class="now-line" :style="{ top: timelineHeight + 'px', width: 0 + 'px', left: liveXPos + 'px', marginLeft: rowHeaderWidth + 'px' }">
         <v-icon class="ma-0 pa-0 now-line-arrow" size="large">mdi-triangle-small-down</v-icon>
       </div>
 
@@ -104,6 +104,7 @@
 
     </div>
     <div
+      v-if="false"
       style="position: absolute; height: 200px; width: 400px; top: 200px; left: 500px; background-color: greenyellow; color: blue;">
       <div><strong>topIndex: </strong>{{ topIndex }}</div>
       <div><strong>pageCount: </strong>{{ visibleChannelCount }}</div>
@@ -183,12 +184,14 @@ const scrollY = useTemplateRef('scroll-y')
 const scrollYTop = useTemplateRef('scroll-y-top')
 const scrollYBottom = useTemplateRef('scroll-y-bottom')
 
-const { drawers, selectedStream, selectedGroup, streams, channels } = defineProps<{
+const { drawers, selectedStream, selectedGroup, streams, channels, pixelsPerHour, rowHeaderWidth } = defineProps<{
   drawers: { video: boolean },
   selectedStream: M3uItem | null,
   selectedGroup: string,
   streams: { [key: string]: Omit<M3uItem, "groupTitle">[] },
-  channels: { [key: string]: Omit<SimpleProgramme, "channel">[] }
+  channels: { [key: string]: Omit<SimpleProgramme, "channel">[] },
+  pixelsPerHour: number,
+  rowHeaderWidth: number
 }>()
 
 watch(() => selectedGroup, (newGroup, oldGroup) => {
@@ -233,8 +236,6 @@ const hoursOfEpg = ref(24)
 const hoursOfPast = 12
 const timelineHeight = ref(40)
 const rowHeight = ref(40)
-const rowHeaderWidth = ref(160)
-const pixelsPerHour = ref(400)
 const scrollXPos = ref(0)
 
 const containerHeight = computed(() => display.height.value - 124 - (drawers.video ? 300 : 0))
@@ -246,10 +247,10 @@ const guideStartTime = ref((() => {
 })())
 const guideEndTime = computed(() => guideStartTime.value + (hoursOfEpg.value * HOUR))
 
-const scrollTime = computed(() => guideStartTime.value + (scrollXPos.value / pixelsPerHour.value * HOUR))
+const scrollTime = computed(() => guideStartTime.value + (scrollXPos.value / pixelsPerHour * HOUR))
 const scrollTimeString = computed(() => (new Date(scrollTime.value)).toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' }))
 
-const offsetToNow = computed(() => Math.floor((scrollTime.value - now.value) / HOUR * pixelsPerHour.value) + 1)
+const offsetToNow = computed(() => Math.floor((scrollTime.value - now.value) / HOUR * pixelsPerHour) + 1)
 
 const nowHour = computed(() => {
   const thisNowHour = new Date(now.value)
@@ -263,8 +264,8 @@ const nowHalfHour = computed(() => {
   return thisHalfHour.getTime()
 })
 
-const halfHourXPos = computed(() => Math.floor(((now.value >= nowHalfHour.value ? nowHalfHour.value : nowHour.value) - guideStartTime.value) / HOUR * pixelsPerHour.value))
-const liveXPos = computed(() => Math.floor((now.value - guideStartTime.value) / HOUR * pixelsPerHour.value))
+const halfHourXPos = computed(() => Math.floor(((now.value >= nowHalfHour.value ? nowHalfHour.value : nowHour.value) - guideStartTime.value) / HOUR * pixelsPerHour))
+const liveXPos = computed(() => Math.floor((now.value - guideStartTime.value) / HOUR * pixelsPerHour))
 
 const timerInterval = setInterval(() => {
   now.value = Date.now()
@@ -285,20 +286,20 @@ const onWheel = (e: WheelEvent) => scrollXTimeline.value!.scrollLeft! += e.delta
 
 const onScrollXBottom = (e: Event) => {
   e.preventDefault()
-  if (e.target && 'scrollLeft' in e.target && typeof e.target.scrollLeft === 'number' && scrollX.value && e.target.scrollLeft >= 0 && e.target.scrollLeft <= hoursOfEpg.value * pixelsPerHour.value) {
+  if (e.target && 'scrollLeft' in e.target && typeof e.target.scrollLeft === 'number' && scrollX.value && e.target.scrollLeft >= 0 && e.target.scrollLeft <= hoursOfEpg.value * pixelsPerHour) {
     scrollXPos.value = e.target.scrollLeft
     scrollX.value.scrollLeft = e.target.scrollLeft
   }
 }
 
 const styleProgramRow = () => ({
-  left: rowHeaderWidth.value + 'px',
+  left: rowHeaderWidth + 'px',
   height: rowHeight.value + 'px',
-  transform: `translateY(-${rowHeight.value}px)`,
+  marginTop: `-${rowHeight.value}px`,
 })
 
 const getProgramDurationMs = (program: Omit<SimpleProgramme, "channel">) => program.stop! - (program.start < guideStartTime.value ? guideStartTime.value : program.start)
-const getProgramWidth = (program: Omit<SimpleProgramme, "channel">) => getProgramDurationMs(program) / HOUR * pixelsPerHour.value + 'px'
+const getProgramWidth = (program: Omit<SimpleProgramme, "channel">) => getProgramDurationMs(program) / HOUR * pixelsPerHour + 'px'
 
 const styleProgram = (channel: string, index: number) => {
   const program = cleanChannels.value[channel][index]
@@ -312,7 +313,7 @@ const styleProgram = (channel: string, index: number) => {
 const styleLastProgramText = (channel: string) => {
   const lastProgram = cleanChannels.value[channel][cleanChannels.value[channel].length - 1]
   return {
-    marginLeft: !lastProgram || scrollTime.value < lastProgram.stop! ? '0px' : lastProgram.stop! < guideStartTime.value ? scrollXPos.value + 'px' : `${scrollXPos.value - ((lastProgram.stop! - guideStartTime.value) * pixelsPerHour.value / HOUR)}px`,
+    marginLeft: !lastProgram || scrollTime.value < lastProgram.stop! ? '0px' : lastProgram.stop! < guideStartTime.value ? scrollXPos.value + 'px' : `${scrollXPos.value - ((lastProgram.stop! - guideStartTime.value) * pixelsPerHour / HOUR)}px`,
     lineHeight: rowHeight.value + 'px'
   }
 }
@@ -321,7 +322,7 @@ const styleProgramText = (channel: string, index: number) => {
   if (program.start < guideStartTime.value && program.stop! > guideStartTime.value)
     return { marginLeft: `${scrollXPos.value}px` }
   if (scrollTime.value > program.start && scrollTime.value < program.stop!)
-    return { marginLeft: `${scrollXPos.value - ((program.start - guideStartTime.value) * pixelsPerHour.value / HOUR)}px` }
+    return { marginLeft: `${scrollXPos.value - ((program.start - guideStartTime.value) * pixelsPerHour / HOUR)}px` }
 }
 
 const isProgramLive = (program: Omit<SimpleProgramme, "channel">) => now.value < (program.stop || 0) && now.value >= program.start
@@ -371,8 +372,8 @@ const isProgramLive = (program: Omit<SimpleProgramme, "channel">) => now.value <
 
 .now-line {
   position: absolute;
+  left: 0;
   height: 100%;
-  width: 0px;
   border-left: 2px dotted rgb(var(--v-theme-info));
 }
 

@@ -27,6 +27,8 @@
       v-bind:selected-group="selectedGroup"
       v-bind:channels="channels"
       v-bind:streams="streams"
+      v-bind:pixels-per-hour="pixelsPerHour"
+      v-bind:row-header-width="rowHeaderWidth"
       @select="selectStream"/>
       
   </v-card>
@@ -43,10 +45,13 @@ import GuideView from './GuideView.vue'
 
 const drawers = defineModel<{ video: boolean }>('drawers', { required: true })
 const selectedStream = defineModel<M3uItem | null>('selectedStream', { required: true })
+
 const { selectedGroup, streams, channels } = defineProps<{
   selectedGroup: string,
   streams: { [key: string]: Omit<M3uItem, "groupTitle">[] },
-  channels: { [key: string]: Omit<SimpleProgramme, "channel">[] }
+  channels: { [key: string]: Omit<SimpleProgramme, "channel">[] },
+  rowHeaderWidth: number,
+  pixelsPerHour: number
 }>()
 
 const savedView = localStorage.getItem('view')
