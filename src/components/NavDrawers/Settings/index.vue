@@ -98,5 +98,5 @@ const saveFilters = () => localStorage.setItem('filters', JSON.stringify(groupFi
 
 const saveRowHeaderWidth = () => localStorage.setItem('rowHeaderWidth', rowHeaderWidth.value + '')
 const savePixelPerHour = () => localStorage.setItem('pixelsPerHour', pixelsPerHour.value + '')
-const savePrivacyMode = (value: boolean) => localStorage.setItem('privacyMode', (+value) + '')
+const savePrivacyMode = () => localStorage.setItem('privacyMode', (+!privacyMode.value) + '')
 </script>
